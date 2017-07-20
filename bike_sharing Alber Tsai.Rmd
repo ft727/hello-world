@@ -1,0 +1,350 @@
+---
+title: "bike_sharing"
+author: "Albert Tsai"
+date: "7/10/2017"
+output: html_document
+---
+Updated on `r date()`.
+```{r echo=FALSE, warning=FALSE, message=FALSE}
+#required libraries
+library(tidyverse)
+library(ggplot2)
+library(ggthemes)
+library(ggvis)
+library(reshape2)
+library(knitr)
+library(shiny)
+#working directory
+setwd("~/Documents/Rdata")
+```
+
+##N.Homework: Communicate - Create an RMarkdown document
+
+**Complete on your own.**
+
+Create an RMarkdown document named Bike_Sharing.Rmd. Include the code and markup for exercises E-L.
+
+##E. Exercise: Import the bike sharing data
+
+This data spans the District of Columbia, Arlington County, Alexandria, Montgomery County and Fairfax County.  The Capital Bikeshare system is owned by the participating jurisdictions and is operated by Motivate, a Brooklyn, NY-based company that operates several other bikesharing systems including Citibike in New York City, Hubway in Boston and Divvy Bikes in Chicago. 
+
+***
+
+```{r eval=TRUE}
+library(readr)
+bikeshare <- read.csv("~/Documents/Rdata/bikesharedailydata.csv")
+```
+
+***
+
+##F. Exercise: Take a look at the data.
+
+**Preview the data**
+
+You can preview the data using the head function to show the first few observations.
+
+```{r, tidy=TRUE}
+head(bikeshare)
+```
+
+***
+
+Next, you can view the variables and types by using the str function. 
+```{r eval=FALSE, tidy=TRUE}
+str(bikeshare)
+```
+
+One of the first things you may notice is the data dimensions, the number of rows and columns. Specifically there are 731 rows (observations) and 16 columns (variables or attributes).
+
+Rows are commonly referred to as observations or records and columns are described as attributes or variables. 
+
+However, the variable names listed at the first row of every column are not very descriptive. 
+
+***
+
+##G. Exercise: Understanding the variables
+
+###Take a look column named season. What is the meaning of season? What are the possible values for this variable? 
+
+```{r tidy=TRUE}
+bikeshare$season
+```
+
+***
+
+**What type of variable is it?**
+
+It is an integer.
+You’ll notice that in the column seasons the values are integers that range between 1 and 4. 
+
+***
+
+**What do the numbers represent?**
+
+If we really think about it’s unlikely that the numbers represent quantities. Instead, they probably represent the seasons of the year because we know there are four seasons.  The numbers (1 through 4) are probably a code for the each of the four seasons of the year.   Without additional information, such as a data dictionary or read me file, it would be impossible for the user of the data to know what the possible values of 1 through 4 correspond to in the categorical variable named season. 
+
+This leads us to the next step, reviewing the data dictionary along with the data set to better understand the meaning behind the values. 
+
+***
+
+**Review the data dictionary**
+
+A data dictionary defines the characteristics of each of the data attributes.  If your data comes from a reputable source, odds are that it is accompanied with a data dictionary or metadata. To know which season is represented by each number in the variable season we can review the data dictionary. 
+
+***
+
+Field | Definition
+------------- | -------------
+instant | record index
+dteday | date
+season | season (1:spring, 2:summer, 3:fall, 4:winter)
+yr | year (0: 2011, 1:2012)
+mnth | month ( 1 to 12)
+hr | hour (0 to 23)
+holiday | weather day is holiday or not 
+weekday | day of the week
+workingday | if day is neither weekend nor holiday is 1, otherwise is 0.
+weathersit | 1, 2, 3, 4
+-- 1 | Clear, Few clouds, Partly cloudy, Partly cloudy 
+-- 2 | Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
+-- 3 |Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+-- 4 | Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+temp | Normalized temperature in Celsius. The values are divided to 41 (max)
+atemp | Normalized feeling temperature in Celsius. The values are divided to 50 (max)
+hum | Normalized humidity. The values are divided to 100 (max)
+windspeed | Normalized wind speed. The values are divided to 67 (max)
+casual | count of casual users
+registered | count of registered users
+cnt | count of total rental bikes including both casual and registered
+
+***
+
+For example, *season* is a categorical variable defined by one of four values, each representing a season (1: spring, 2: summer, 3: fall, 4: winter).  
+
+***
+
+You’ll notice that the variable *year* is coded with the value of 0 for 2011 and 1 for 2012, rather than actual year value of 2011 or 2012. 
+
+***
+
+The variable *weathersit* is encoded with four possible values, 1 through 4.  The values represent the daily weather situation as defined below.
+
+1. Clear, Few clouds, Partly cloudy, Partly cloudy
+2. Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
+3. Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain +
+Scattered clouds
+4. Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+
+***
+
+It is essential undergo this process of understanding to help inform the formulate questions for exploration and further analysis.  Visualizing data without understanding the meaning of the variables will make it difficult for you to interpret the result. By approaching a data visualization task informed about the data and its attributes you can better formulate questions for visual exploration.  The next step is to prepare the data for analytical and visualization tasks.
+
+***
+
+At this point, you may want to rename the columns in your data set to make the data more usable when you begin the analysis.  Renaming columns is a manual process that literally involves change the each column name. It is best practice to use lower case lettering and avoid spaces or hyphenation. 
+
+***
+
+**Preparing your data**
+##H. Exercise: Renaming columns
+
+There are many ways to rename columns. Two approaches are presented below
+
+###Renaming columns with the rename function from the dplyr library.
+```{r}
+library(dplyr)
+bikeshare <- rename(bikeshare, humidity = hum)
+names(bikeshare)
+```
+
+###Renaming columns with R base functions.
+```{r}
+# Rename column where names is "yr"
+names(bikeshare)[names(bikeshare) == "yr"] <- "year"
+names(bikeshare)
+```
+
+***
+
+##I. Exercise: Dealing with missing values
+
+Even before you define the questions you seek to have answered from the data, it needs to be formatted appropriately. The rows should correspond to observations and the columns correspond the observed variables. This makes it easier to map the data to visual properties such as position, color, size, or shape.  A preprocessing step is necessary to verify the dataset for correctness and consistency. Incomplete information has a high potential for incorrect results. 
+
+***
+
+###Tactics
+
+There are several ways you tackle working with data that are incomplete. Each has its pros and cons.
+
+a. Ignore any record with missing values 
+b. Replace empty fields with a pre-defined value
+c. Replace empty fields with the most frequently appeared value
+d. Use the mean value 
+e. Manual approach
+
+###Problem
+* Row 7, column 3: The season variable has no value
+* Row 10, column 5: The month has no value. 
+
+###Solution
+In these two cases it's easy to replace the value with a pre-known value. We wouldn't want to ignore the record because the values can be easily determined.
+
+***
+
+**Updating the records**
+```{r}
+bikeshare$season[7]
+1->bikeshare$season[7]
+bikeshare$season[7]
+```
+
+```{r}
+bikeshare$mnth[10]
+1->bikeshare$mnth[10]
+bikeshare$mnth[10]
+```
+
+***
+
+## J. Exercise: Understand - Calculate basic summary statistics
+
+It is helpful to calculate some summary statistics about your data to learn more about the distribution, the median, minimum, maximum values, variance, standard deviation, number of observations and attributes. 
+
+***
+
+```{r}
+summary(bikeshare)
+```
+The summary function shows the mean, median, minimum, and maximum values for each variable in the data set. This is particular useful for continuous variables such as temp, cnt, casual, and registered. For example, you can easily see the average number of customers (casual and registered) per day.  
+
+***
+
+##K. Exercise: Understand - Visualize
+
+Explore the data visually. As a first step, consider scatterplots to show relationships between variables, histograms for frequencies, density plots to show distributions, and box plots to show the range of values. 
+
+###Kernal density plot
+
+Let’s say you wanted to see know the distribution of the ridership.
+
+Kernal density plots are an effective way to view the distribution of a variable. Create the plot using plot(density(x)) where x is a numeric vector.
+
+***
+**A density plot that shows the shape of the data for the number of riders per day.**
+```{r echo=TRUE}
+density_riders = density(bikeshare$cnt)
+plot(density_riders, main= "Number of riders per day",sub= round(mean(bikeshare$cnt), 2),"Mean =", frame=FALSE)
+polygon(density_riders, col="gray", border="gray")
+```
+
+How would we interpret the density plot?
+
+***
+
+###Histogram
+**A histogram that shows the frequency of the weather situation by day.**
+
+```{r eval=TRUE}
+hist(bikeshare$weathersit, col="gray",border="gray", xlab="Weather", main="Frequency of weather situations")
+```
+
+
+Value | Meaning
+------------- | -------------
+1 | Clear, Few clouds, Partly cloudy, Partly cloudy
+2 | Mist + Cloudy, Mist + Broken clouds, Mist + Few clouds, Mist
+3 | Light Snow, Light Rain + Thunderstorm + Scattered clouds, Light Rain + Scattered clouds
+4 | Heavy Rain + Ice Pallets + Thunderstorm + Mist, Snow + Fog
+
+**How would we interpret the histogram?**
+
+***
+
+You can check to see if your histogram makes is clear by reviewing the sum of each value for *weathersit*.
+```{r}
+table(bikeshare$weathersit)
+```
+
+##L. Exercise: Scatter plots
+
+To see relationships, scatter plots are useful. In this case, we are looking for positive or negative correlations.
+
+***
+
+###Scatter plot
+
+**A simple scatter plot that shows the relationship between the rentals and temperature**
+```{r, fig.height=12, fig.width=12}
+plot(bikeshare$cnt, bikeshare$atemp, main= "Relationship between bike rentals and average daily temperature", frame=FALSE, xlab="Number of rentals per day", ylab="Average daily temperature in degrees fahrenheit")
+```
+
+***
+###Scatter plot with fit lines
+
+To aid in the interpretation, it is helpful to add a linear regression line if there is a linear relationship or a lowess line. A lowess line will more accurate fit the line to the data. 
+
+
+```{r, fig.height=12, fig.width=12}
+plot(bikeshare$cnt, bikeshare$atemp, main= "Relationship between bike rentals and average daily temperature", frame=FALSE, xlab="Number of rentals per day", ylab="Average daily temperature in degrees fahrenheit")
+
+# Add fit lines
+abline(lm(bikeshare$atemp~bikeshare$cnt), col="blue") # regression line (y~x) 
+lines(lowess(bikeshare$cnt, bikeshare$atemp), col="orange") # lowess line (x,y)
+```
+
+***
+
+**How would we interpret this scatter plot? **
+Use this to inform the title of your plot.
+
+***
+
+###Scatter plot with grouped categorical data (season)
+
+Consider using color to group categorical data. In this example, we are grouping the points by season. We're using the ggvis package.  
+
+```{r}
+#static chart
+library(ggvis)
+bikeshare %>% 
+  ggvis(x=~cnt, y=~atemp) %>% 
+
+layer_points(fill = ~season)   %>% 
+  add_axis("x", title = "Number of rentals per day") %>%
+  add_axis("y", title = "Average daily temperature in degrees fahrenheit")
+```
+
+***
+
+###Scatter plot with grouped categorical data (year)
+
+We can even look at the data by year.
+
+```{r}
+#static chart
+library(ggvis)
+bikeshare %>% 
+  ggvis(x=~cnt, y=~atemp) %>% 
+
+layer_points(fill = ~year)   %>% 
+  add_axis("x", title = "Number of rentals per day") %>%
+  add_axis("y", title = "Average daily temperature in degrees fahrenheit")
+```
+
+##M. Exercise: Interactive chart - Use ggvis to filter
+
+Then we can build on the example above and add a filter to hide and reveal different seasons.
+
+
+```{r eval=FALSE}
+library(ggvis)
+bikeshare %>% 
+  ggvis(x=~cnt, y=~atemp) %>% 
+  filter(bikeshare$season %in% eval(input_checkboxgroup(choices=unique(bikeshare$season), 
+    selected = "1")))%>% 
+layer_points(fill = ~factor(season))   %>% 
+  add_axis("x", title = "Number of rentals per day") %>%
+  add_axis("y", title = "Average daily temperature in degrees fahrenheit") 
+  %>%
+  add_legend(title ="Seasons", size = 200)
+```
